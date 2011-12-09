@@ -2,8 +2,36 @@
  #include <ctype.h>
  #include <SoftwareSerial.h>
 
-SoftwareSerial mySerial(7,8);
+#define LCDtxPin 8
 
+SoftwareSerial LCD = SoftwareSerial(7, LCDtxPin);
+// since the LCD does not send data back to the Arduino, we should only define the txPin
+const int LCDdelay=10;  // conservative, 2 actually works
+int loc=0;
+// wbp: goto with row & column
+void goTo(int row, int col) {
+  LCD.print(0xFE, BYTE);   //command flag
+  LCD.print((col + row*64 + 128), BYTE);    //position 
+  delay(LCDdelay);
+}
+void clearLCD(){
+  LCD.print(0xFE, BYTE);   //command flag
+  LCD.print(0x01, BYTE);   //clear command.
+  delay(LCDdelay);
+}
+void backlightOn() {  //turns on the backlight
+  LCD.print(0x7C, BYTE);   //command flag for backlight stuff
+  LCD.print(157, BYTE);    //light level.
+  delay(LCDdelay);
+}
+void backlightOff(){  //turns off the backlight
+  LCD.print(0x7C, BYTE);   //command flag for backlight stuff
+  LCD.print(128, BYTE);     //light level for off.
+   delay(LCDdelay);
+}
+void serCommand(){   //a general function to call the command flag for issuing all other commands   
+  LCD.print(0xFE, BYTE);
+}
  int ledPin = 13;                  // LED test pin
  int rxPin = 0;                    // RX PIN 
  int txPin = 1;                    // TX TX
@@ -14,9 +42,11 @@ SoftwareSerial mySerial(7,8);
  int cont=0;
  int bien=0;
  int conta=0;
- int indices[13];
+ int indices[15];
  void setup() {
-   mySerial.begin(4800);
+   pinMode(LCDtxPin,OUTPUT);
+   LCD.begin(9600);
+   clearLCD();
    backlightOn();
    pinMode(ledPin, OUTPUT);       // Initialize LED pin
    pinMode(rxPin, INPUT);
@@ -27,6 +57,8 @@ SoftwareSerial mySerial(7,8);
    }   
  }
  void loop() {
+//     selectLineOne();
+
 //   digitalWrite(ledPin, LOW);
 //   byteGPS = -1;
    byteGPS=Serial.read();         // Read a byte of the serial port
@@ -41,9 +73,11 @@ SoftwareSerial mySerial(7,8);
      linea[conta]=byteGPS;        // If there is serial port data, it is put in the buffer
      conta++;                      
      Serial.print(byteGPS, BYTE); 
-      selectLineOne();
-     mySerial.print("$GPGGA,,,,,,0,00,,,,,,,*66"
-);
+     goTo(loc/16,loc%16);
+     LCD.print(byteGPS,BYTE);
+     loc++;
+     if(loc >32)
+       loc=0;
      digitalWrite(ledPin, HIGH); 
      if (byteGPS==15){            // If the received byte is = to 13, end of transmission
 
@@ -99,45 +133,45 @@ SoftwareSerial mySerial(7,8);
    }
  }
  
- 
- void selectLineOne(){  //puts the cursor at line 0 char 0.
-   mySerial.print(0xFE, BYTE);   //command flag
-   mySerial.print(128, BYTE);    //position
-   delay(10);
-}
-void selectLineTwo(){  //puts the cursor at line 0 char 0.
-   mySerial.print(0xFE, BYTE);   //command flag
-   mySerial.print(192, BYTE);    //position
-   delay(10);
-}
-void goTo(int position) { //position = line 1: 0-15, line 2: 16-31, 31+ defaults back to 0
-if (position<16){
-  mySerial.print(0xFE, BYTE);   //command flag
-              mySerial.print((position+128), BYTE);    //position
-}else if (position<32){
-  mySerial.print(0xFE, BYTE);   //command flag
-              mySerial.print((position+48+128), BYTE);    //position 
-} else { goTo(0); }
-   delay(10);
-}
-
-void clearLCD(){
-   mySerial.print(0xFE, BYTE);   //command flag
-   mySerial.print(0x01, BYTE);   //clear command.
-   delay(10);
-}
-void backlightOn(){  //turns on the backlight
-    mySerial.print(0x7C, BYTE);   //command flag for backlight stuff
-    mySerial.print(157, BYTE);    //light level.
-   delay(10);
-}
-void backlightOff(){  //turns off the backlight
-    mySerial.print(0x7C, BYTE);   //command flag for backlight stuff
-    mySerial.print(128, BYTE);     //light level for off.
-   delay(10);
-}
-void serCommand(){   //a general function to call the command flag for issuing all other commands   
-  mySerial.print(0xFE, BYTE);
-}
-
+// 
+// void selectLineOne(){  //puts the cursor at line 0 char 0.
+//   mySerial.print(0xFE, BYTE);   //command flag
+//   mySerial.print(128, BYTE);    //position
+//   delay(10);
+//}
+//void selectLineTwo(){  //puts the cursor at line 0 char 0.
+//   mySerial.print(0xFE, BYTE);   //command flag
+//   mySerial.print(192, BYTE);    //position
+//   delay(10);
+//}
+//void goTo(int position) { //position = line 1: 0-15, line 2: 16-31, 31+ defaults back to 0
+//if (position<16){
+//  mySerial.print(0xFE, BYTE);   //command flag
+//              mySerial.print((position+128), BYTE);    //position
+//}else if (position<32){
+//  mySerial.print(0xFE, BYTE);   //command flag
+//              mySerial.print((position+48+128), BYTE);    //position 
+//} else { goTo(0); }
+//   delay(10);
+//}
+//
+//void clearLCD(){
+//   mySerial.print(0xFE, BYTE);   //command flag
+//   mySerial.print(0x01, BYTE);   //clear command.
+//   delay(10);
+//}
+//void backlightOn(){  //turns on the backlight
+//    mySerial.print(0x7C, BYTE);   //command flag for backlight stuff
+//    mySerial.print(157, BYTE);    //light level.
+//   delay(10);
+//}
+//void backlightOff(){  //turns off the backlight
+//    mySerial.print(0x7C, BYTE);   //command flag for backlight stuff
+//    mySerial.print(128, BYTE);     //light level for off.
+//   delay(10);
+//}
+//void serCommand(){   //a general function to call the command flag for issuing all other commands   
+//  mySerial.print(0xFE, BYTE);
+//}
+//
 
